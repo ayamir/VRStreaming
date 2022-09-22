@@ -16,13 +16,15 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
-namespace FusedVR.VRStreaming {
+namespace FusedVR.VRStreaming
+{
     /// <summary>
     /// The manager class is responsible for handling the source data from the client and distributing accordingly
     /// This data will be recieved from the Broadcast channel on the Data Channel
     /// Since this is manages the Data Channel, it can be used to send and recieve data from the client
     /// </summary>
-    public class VRInputManager : InputChannelReceiverBase {
+    public class VRInputManager : InputChannelReceiverBase
+    {
 
         #region Properties
         /// <summary>
@@ -52,23 +54,54 @@ namespace FusedVR.VRStreaming {
         /// <summary>
         /// The Data Format  that we are getting from the VR headset
         /// </summary>
-        public enum VRDataType {
+        public enum VRDataType
+        {
             PosRot,
             Button,
             Axis,
             Display,
             EnterVR,
-            ExitVR
+            ExitVR,
+            HandTrackingPosRot,
+            HandTrackingBoolEvent
         }
 
         /// <summary>
         /// Data Source for positional / rotational VR Data i.e. Head Left Hand or Right Hand
         /// </summary>
-        public enum Source {
+        public enum Source
+        {
             Head,
             Left,
-            Right
+            Right,
         }
+
+        public enum HandTrackingSource
+        {
+            thumbMetacarpal,
+            thumbPhalanxProximal,
+            thumbPhalanxDistal,
+            thumbTip,
+            indexFingerPhalanxProximal,
+            indexFingerPhalanxIntermediate,
+            indexFingerPhalanxDistal,
+            indexFingerTip,
+            middleFingerPhalanxProximal,
+            middleFingerPhalanxIntermediate,
+            middleFingerPhalanxDistal,
+            middleFingerTip,
+            ringFingerPhalanxProximal,
+            ringFingerPhalanxIntermediate,
+            ringFingerPhalanxDistal,
+            ringFingerTip,
+            pinkyFingerPhalanxProximal,
+            pinkyFingerPhalanxIntermediate,
+            pinkyFingerPhalanxDistal,
+            pinkyFingerTip,
+            wrist
+        }
+
+
 
         /// <summary>
         /// The Base ID for Recieving VR Data from the Web Client
@@ -86,20 +119,43 @@ namespace FusedVR.VRStreaming {
         /// Wrapper class for the Unity Event to pass custom data. 
         /// </summary>
         [System.Serializable]
-        public class VRPoseData : UnityEvent<Source, Vector3, Quaternion> {
+        public class VRPoseData : UnityEvent<Source, Vector3, Quaternion>
+        {
 
         }
+
+        [System.Serializable]
+        public class VRHandTrackingData : UnityEvent<Source, HandTrackingSource, Vector3, Quaternion>
+        {
+
+        }
+
+
 
         /// <summary>
         /// The Unity Event is responsible for sending data related to the positional or rotational data from the client
         /// </summary>
         public VRPoseData VRPoseEvent;
+        public VRHandTrackingData VRJointsPose;
+
 
         /// <summary>
         /// C# Event responsible for sending Controller Button Data that is recieved from the client
         /// </summary>
         public delegate void OnButtonDataRecieved(Source handID, int buttonID, bool pressed, bool touched);
         public OnButtonDataRecieved ButtonDataEvent;
+
+        /// <summary>
+        /// C# Event responsible for sending Controller Button Data that is recieved from the client
+        /// </summary>
+        public delegate void OnVRHandTrackingVectEventRecieved(Source handID, int EventID, Vector3 dir);
+        public OnVRHandTrackingVectEventRecieved VRHandTrackingVecEvent;
+
+        /// <summary>
+        /// C# Event responsible for sending Controller Button Data that is recieved from the client
+        /// </summary>
+        public delegate void OnVRHandTrackingBoolEventRecieved(Source handID, int EventID, bool Enable);
+        public OnVRHandTrackingBoolEventRecieved HandTrackingBoolDataEvent;
 
 
         /// <summary>
@@ -126,16 +182,21 @@ namespace FusedVR.VRStreaming {
 
         #region Methods
 
-        private void Awake() {
-            if (enableKeyboardTouchControls) {
+        private void Awake()
+        {
+            if (enableKeyboardTouchControls)
+            {
                 camControls = gameObject.AddComponent<CameraControls>();
                 camControls.inputManager = this;
             }
         }
 
-        public override void SetChannel(string connectionId, RTCDataChannel channel) {
-            if (channel == null) {
-                if (remoteInput != null) {
+        public override void SetChannel(string connectionId, RTCDataChannel channel)
+        {
+            if (channel == null)
+            {
+                if (remoteInput != null)
+                {
                     remoteInput.Dispose();
 
                     onDeviceChange?.Invoke(remoteInput.RemoteKeyboard, InputDeviceChange.Removed);
@@ -144,9 +205,11 @@ namespace FusedVR.VRStreaming {
 
                     remoteInput = null;
                 }
-            } else {
+            }
+            else
+            {
                 remoteInput = RemoteInputReceiver.Create();
-                onDeviceChange?.Invoke(remoteInput.RemoteKeyboard , InputDeviceChange.Added);
+                onDeviceChange?.Invoke(remoteInput.RemoteKeyboard, InputDeviceChange.Added);
                 onDeviceChange?.Invoke(remoteInput.RemoteMouse, InputDeviceChange.Added);
                 onDeviceChange?.Invoke(remoteInput.RemoteTouchscreen, InputDeviceChange.Added);
 
@@ -160,7 +223,8 @@ namespace FusedVR.VRStreaming {
         /// Public Method to send string data over the data channel for the client to respond to. 
         /// Currently, the client does not do anything with data that is recieved and any such action would need to be implemented
         /// </summary>
-        public void SendData(string msg) {
+        public void SendData(string msg)
+        {
             base.Channel.Send(msg);
         }
 
@@ -168,11 +232,13 @@ namespace FusedVR.VRStreaming {
         /// Recieve Data from the client via the Data Channel
         /// Based on the first byte, this method determines how to process the data and what events to expose for the application to listen to
         /// </summary>
-        protected override void OnMessage(byte[] bytes) {
+        protected override void OnMessage(byte[] bytes)
+        {
             if (bytes[0] == VR_DEVICE_ID) //VR or Crypto Device Data
             {
                 int data_type = bytes[1]; //get input data source
-                switch ((VRDataType)data_type) {
+                switch ((VRDataType)data_type)
+                {
                     case VRDataType.PosRot:
                         Source device_type = (Source)bytes[2]; //get source
                         Vector3 pos = new Vector3(BitConverter.ToSingle(bytes, 3),
@@ -187,7 +253,7 @@ namespace FusedVR.VRStreaming {
                             BitConverter.ToBoolean(bytes, 5));
                         break;
                     case VRDataType.Axis:
-                        if (BitConverter.ToBoolean(bytes, 3) || BitConverter.ToBoolean(bytes, 12)) { //if trackpad changed
+                        /*if (BitConverter.ToBoolean(bytes, 3) || BitConverter.ToBoolean(bytes, 12)) { //if trackpad changed
                             AxisDataEvent?.Invoke((Source)bytes[2], 1, BitConverter.ToSingle(bytes, 4),
                                 BitConverter.ToSingle(bytes, 13));
                         }
@@ -195,8 +261,10 @@ namespace FusedVR.VRStreaming {
                         if (BitConverter.ToBoolean(bytes, 21) || BitConverter.ToBoolean(bytes, 30)) { //if joystick changed
                             AxisDataEvent?.Invoke((Source)bytes[2], 0, BitConverter.ToSingle(bytes, 22),
                                 BitConverter.ToSingle(bytes, 31));
-                        }
-
+                        }*/
+                        AxisDataEvent?.Invoke((Source)bytes[2], 1, BitConverter.ToSingle(bytes, 3), BitConverter.ToSingle(bytes, 11));
+                        float x = BitConverter.ToSingle(bytes, 3);
+                        float y = BitConverter.ToSingle(bytes, 11);
                         break;
                     case VRDataType.Display:
                         int width = (int)BitConverter.ToUInt32(bytes, 2);
@@ -215,12 +283,28 @@ namespace FusedVR.VRStreaming {
                     case VRDataType.ExitVR:
                         VRModeEvent?.Invoke(false);
                         break;
+                    case VRDataType.HandTrackingPosRot:
+                        Source HandType = (Source)bytes[2]; // which hand
+                        HandTrackingSource Type = (HandTrackingSource)bytes[3]; //which finger which part
+                        Vector3 HandTrackingPos = new Vector3(BitConverter.ToSingle(bytes, 4),
+                            BitConverter.ToSingle(bytes, 12), BitConverter.ToSingle(bytes, 20));
+
+                        Quaternion HandTrackingRot = new Quaternion(BitConverter.ToSingle(bytes, 28), BitConverter.ToSingle(bytes, 36), -BitConverter.ToSingle(bytes, 44), -BitConverter.ToSingle(bytes, 52));
+
+                        VRJointsPose.Invoke(HandType, Type, HandTrackingPos, HandTrackingRot);
+                        break;
+                    case VRDataType.HandTrackingBoolEvent:
+                        // Debug.Log("FistEventReceived");
+                        HandTrackingBoolDataEvent?.Invoke((Source)bytes[2], bytes[3], BitConverter.ToBoolean(bytes, 4));
+                        break;
                     default:
-                        Debug.LogError(Encoding.UTF8.GetString(bytes, 1, bytes.Length-1)); //ignore header byte
+                        Debug.LogError(Encoding.UTF8.GetString(bytes, 1, bytes.Length - 1)); //ignore header byte
                         break;
                 }
-            } else if ( bytes[0] == CRYPTO_DEVICE_ID ) {
-                CryptoEvent?.Invoke( (BlockchainData.DataEvents) bytes[1] , 
+            }
+            else if (bytes[0] == CRYPTO_DEVICE_ID)
+            {
+                CryptoEvent?.Invoke((BlockchainData.DataEvents)bytes[1],
                     Encoding.UTF8.GetString(bytes, 2, bytes.Length - 2)); //subtract 2 for the header bits
             }
         }

@@ -1,9 +1,12 @@
 ﻿using UnityEngine;
 using Unity.RenderStreaming;
 using Unity.WebRTC;
+using System.Linq;
 
-namespace FusedVR.VRStreaming {
-    public class VRCamStream : VideoStreamSender {
+namespace FusedVR.VRStreaming
+{
+    public class VRCamStream : VideoStreamSender
+    {
 
         #region Variables
         [SerializeField]
@@ -32,11 +35,13 @@ namespace FusedVR.VRStreaming {
 
         #region Events
         // Start is called before the first frame update
-        void Start() {
+        void Start()
+        {
             OnStartedStream += StartStream;
         }
 
-        private void StartStream(string connectionId) {
+        private void StartStream(string connectionId)
+        {
             mainConnection = connectionId;
             ChangeSendParameters(BIT_RATE, MAX_FRAMERATE);
         }
@@ -45,18 +50,25 @@ namespace FusedVR.VRStreaming {
         /// Assigns Render Textures to our cameras and then 
         /// Creates a Video Streaming Track that references the render textures
         /// </summary>
-        protected override MediaStreamTrack CreateTrack() {
+        protected override MediaStreamTrack CreateTrack()
+        {
 
             RenderTextureFormat format = WebRTC.GetSupportedRenderTextureFormat(SystemInfo.graphicsDeviceType);
-            RenderTexture rt = new RenderTexture(streamingSize.x, streamingSize.y, depth, format) {
+            var codecs = RTCRtpSender.GetCapabilities(TrackKind.Video).codecs;
+            var av1Codecs = codecs.Where(codec => codec.mimeType == "video/AV1");
+
+
+            RenderTexture rt = new RenderTexture(streamingSize.x, streamingSize.y, depth, format)
+            {
                 antiAliasing = antiAliasing
             };
             rt.Create();
 
             // divide cameras into n sections over the canvas
-            for ( int i = 0; i < cameras.Length; i++) {
+            for (int i = 0; i < cameras.Length; i++)
+            {
                 cameras[i].targetTexture = rt;
-                cameras[i].rect = new Rect(new Vector2(i / cameras.Length, 0f), new Vector2(1 / cameras.Length, 1f)); 
+                cameras[i].rect = new Rect(new Vector2(i / cameras.Length, 0f), new Vector2(1 / cameras.Length, 1f));
             }
 
             return new VideoStreamTrack(rt);
@@ -67,16 +79,21 @@ namespace FusedVR.VRStreaming {
         /// <summary>
         /// Change Parameters associated with encoders for sending data to browser
         /// </summary>
-        public void ChangeSendParameters(ulong? bitrate , uint? framerate) {
-            if (Senders.TryGetValue(mainConnection, out var sender)) {
+        public void ChangeSendParameters(ulong? bitrate, uint? framerate)
+        {
+            if (Senders.TryGetValue(mainConnection, out var sender))
+            {
                 RTCRtpSendParameters parameters = sender.GetParameters();
-                foreach (var encoding in parameters.encodings) {
-                    if (bitrate != null) {
+                foreach (var encoding in parameters.encodings)
+                {
+                    if (bitrate != null)
+                    {
                         encoding.minBitrate = bitrate;
                         encoding.maxBitrate = bitrate;
                     }
 
-                    if (framerate != null) {
+                    if (framerate != null)
+                    {
                         encoding.maxFramerate = framerate;
                     }
                 }

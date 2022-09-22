@@ -42,6 +42,17 @@ namespace FusedVR.VRStreaming
             Joystick,
             Trackpad
         }
+
+        public enum HandTrackingBoolEventType
+        {
+            Grip,
+            Pinch
+        }
+
+        public enum HandTrackingVecEventType
+        {
+            point,
+        }
         #endregion
 
         #region Events
@@ -49,20 +60,29 @@ namespace FusedVR.VRStreaming
         /// The class wrapper for the VRControllerData Unity Event
         /// </summary>
         [System.Serializable]
-        public class VRButtonData : UnityEvent<Hand, Button, bool, bool> {
+        public class VRButtonData : UnityEvent<Hand, Button, bool, bool>
+        {
 
         }
+
 
         /// <summary>
         /// The main controller input Unity Event. You may listen to this event via code or via the inspector just like any other Unity Event.
         /// </summary>
         public VRButtonData VRButtonEvent;
 
+        [System.Serializable]
+        public class VRHandTrackingBoolData : UnityEvent<Hand, HandTrackingBoolEventType, bool>
+        {
+
+        }
+        public VRHandTrackingBoolData VRHandTrackingBoolEvent;
         /// <summary>
         /// The class wrapper for the VRControllerData Unity Event
         /// </summary>
         [System.Serializable]
-        public class VRAxisData : UnityEvent<Hand, Button, float, float> {
+        public class VRAxisData : UnityEvent<Hand, Button, float, float>
+        {
 
         }
 
@@ -70,6 +90,7 @@ namespace FusedVR.VRStreaming
         /// The main controller input Unity Event. You may listen to this event via code or via the inspector just like any other Unity Event.
         /// </summary>
         public VRAxisData VRAxisEvent;
+
         #endregion
 
         private VRInputManager input; // handles recieving the data
@@ -81,12 +102,15 @@ namespace FusedVR.VRStreaming
             input = GetComponent<VRInputManager>();
             input.ButtonDataEvent += ButtonEvents; //start listening
             input.AxisDataEvent += AxisEvents; //start listening
+            input.HandTrackingBoolDataEvent += HandTrackingBoolEvent;
         }
-        
+
         // OnDestroy is called when the game object is about to be destroyed in the scene
-        private void OnDestroy() {
+        private void OnDestroy()
+        {
             input.ButtonDataEvent -= ButtonEvents; //end listening
             input.AxisDataEvent -= AxisEvents; //end listening
+            input.HandTrackingBoolDataEvent -= HandTrackingBoolEvent;
         }
 
         /// <summary>
@@ -94,15 +118,21 @@ namespace FusedVR.VRStreaming
         /// </summary>
         void ButtonEvents(VRInputManager.Source handID, int buttonID, bool pressed, bool touched)
         {
-            VRButtonEvent?.Invoke((Hand)(handID -1), (Button)buttonID, pressed, touched); //invoke the Unity Event
+            VRButtonEvent?.Invoke((Hand)(handID - 1), (Button)buttonID, pressed, touched); //invoke the Unity Event
         }
 
         /// <summary>
         /// Callback function for Raw Data from VRInputManager ControllerDataEvent
         /// </summary>
-        void AxisEvents(VRInputManager.Source handID, int buttonID, float x, float y) {
-            Button axisButton = (Button)((int)Button.Joystick + buttonID);            
+        void AxisEvents(VRInputManager.Source handID, int buttonID, float x, float y)
+        {
+            Button axisButton = (Button)((int)Button.Joystick + buttonID);
             VRAxisEvent?.Invoke((Hand)(handID - 1), axisButton, x, y); //invoke the Unity Event
+        }
+
+        void HandTrackingBoolEvent(VRInputManager.Source handID, int EventID, bool Enable)
+        {
+            VRHandTrackingBoolEvent?.Invoke((Hand)(handID - 1), (HandTrackingBoolEventType)EventID, Enable);
         }
         #endregion
     }
