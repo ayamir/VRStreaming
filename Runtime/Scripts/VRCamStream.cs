@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using Unity.RenderStreaming;
 using Unity.WebRTC;
-using System.Linq;
 
 namespace FusedVR.VRStreaming
 {
@@ -54,10 +53,6 @@ namespace FusedVR.VRStreaming
         {
 
             RenderTextureFormat format = WebRTC.GetSupportedRenderTextureFormat(SystemInfo.graphicsDeviceType);
-            var codecs = RTCRtpSender.GetCapabilities(TrackKind.Video).codecs;
-            var av1Codecs = codecs.Where(codec => codec.mimeType == "video/AV1");
-
-
             RenderTexture rt = new RenderTexture(streamingSize.x, streamingSize.y, depth, format)
             {
                 antiAliasing = antiAliasing
