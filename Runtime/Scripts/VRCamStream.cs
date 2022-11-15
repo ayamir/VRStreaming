@@ -66,7 +66,10 @@ namespace FusedVR.VRStreaming
                 cameras[i].rect = new Rect(new Vector2(i / cameras.Length, 0f), new Vector2(1 / cameras.Length, 1f));
             }
 
-            return new VideoStreamTrack(rt);
+            ObjectRange objectRange = new ObjectRange();
+            Debug.Log($"VRCamStream.cs:: objectRange.iXStart={objectRange.iXStart}, iXEnd={objectRange.iXEnd}, iYStart={objectRange.iYStart}, iYEnd={objectRange.iYEnd}, iQpOffset={objectRange.iQpOffset}");
+
+            return new VideoStreamTrack(rt, objectRange);
         }
         #endregion
 
