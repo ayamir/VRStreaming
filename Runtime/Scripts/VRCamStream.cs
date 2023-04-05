@@ -6,8 +6,6 @@ namespace FusedVR.VRStreaming
 {
     public class VRCamStream : VideoStreamSender
     {
-
-        #region Variables
         [SerializeField]
         [Tooltip("The Cameras to combine together for the render texture")]
         private Camera[] cameras;
@@ -18,37 +16,32 @@ namespace FusedVR.VRStreaming
 
         [SerializeField]
         [Tooltip("Defines the number of samples for anti-aliasing (1, 2, 4, 8)")]
-        private int antiAliasing = 1;
-
-        [SerializeField]
-        [Tooltip("Defines the default bitrate to be used by the encoders in bits per second")]
-        private ulong BIT_RATE = 9000000; //default bitrate of 9 Mbps
+        private int antiAliasing = 4;
 
         /// <summary>
         /// The Main Connection ID that this instance is connected with
         /// </summary>
         private string mainConnection = "";
 
-        public const uint MAX_FRAMERATE = 90; //default max framerate target
-        #endregion
+        public VideoStreamTrack videoStreamTrack;
 
-        #region Events
-        // Start is called before the first frame update
+
+        public VideoStreamTrack GetVideoStreamTrack()
+        {
+            return videoStreamTrack;
+        }
+
         void Start()
         {
             OnStartedStream += StartStream;
         }
 
+
         private void StartStream(string connectionId)
         {
             mainConnection = connectionId;
-            ChangeSendParameters(BIT_RATE, MAX_FRAMERATE);
         }
 
-        /// <summary>
-        /// Assigns Render Textures to our cameras and then 
-        /// Creates a Video Streaming Track that references the render textures
-        /// </summary>
         protected override MediaStreamTrack CreateTrack()
         {
 
@@ -66,14 +59,11 @@ namespace FusedVR.VRStreaming
                 cameras[i].rect = new Rect(new Vector2(i / cameras.Length, 0f), new Vector2(1 / cameras.Length, 1f));
             }
 
-            ObjectRange objectRange = new ObjectRange();
-            Debug.Log($"VRCamStream.cs:: objectRange.iXStart={objectRange.iXStart}, iXEnd={objectRange.iXEnd}, iYStart={objectRange.iYStart}, iYEnd={objectRange.iYEnd}, iQpOffset={objectRange.iQpOffset}");
+            videoStreamTrack = new VideoStreamTrack(rt);
 
-            return new VideoStreamTrack(rt, objectRange);
+            return videoStreamTrack;
         }
-        #endregion
 
-        #region Public Methods
         /// <summary>
         /// Change Parameters associated with encoders for sending data to browser
         /// </summary>
@@ -86,8 +76,8 @@ namespace FusedVR.VRStreaming
                 {
                     if (bitrate != null)
                     {
-                        encoding.minBitrate = bitrate;
-                        encoding.maxBitrate = bitrate;
+                        encoding.minBitrate = bitrate * 1000;
+                        encoding.maxBitrate = bitrate * 1000;
                     }
 
                     if (framerate != null)
@@ -95,12 +85,9 @@ namespace FusedVR.VRStreaming
                         encoding.maxFramerate = framerate;
                     }
                 }
-
                 sender.SetParameters(parameters);
             }
         }
-        #endregion
-
     }
-}
 
+}

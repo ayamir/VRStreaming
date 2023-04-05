@@ -13,14 +13,15 @@ using UnityEngine;
 using Unity.RenderStreaming;
 using Newtonsoft.Json;
 
-namespace FusedVR.VRStreaming {
+namespace FusedVR.VRStreaming
+{
     /// <summary>
     /// VRBroadcast is very similar to the Broadcast script included with Render Streaming.
     /// This script is responsible for listening for offers from the client and choosing when to respond. 
     /// </summary>
     public class VRBroadcast : SignalingHandlerBase,
-        IOfferHandler, IAddChannelHandler, IDisconnectHandler, IDeletedConnectionHandler {
-
+        IOfferHandler, IAddChannelHandler, IDisconnectHandler, IDeletedConnectionHandler
+    {
         #region Variables
 
         public static VRBroadcast Instance { get; private set; } //Singleton Broadcast Manager
@@ -43,7 +44,7 @@ namespace FusedVR.VRStreaming {
         /// <summary>
         /// List of all connectionIds that are connected
         /// </summary>
-        private Dictionary<string , ClientStreams> activeConnections = new Dictionary<string, ClientStreams>();
+        private Dictionary<string, ClientStreams> activeConnections = new Dictionary<string, ClientStreams>();
 
         /// <summary>
         /// List of all connectionIds that have connected to this server
@@ -51,25 +52,32 @@ namespace FusedVR.VRStreaming {
         private Queue<ClientStreams> priorPlayers = new Queue<ClientStreams>();
         #endregion
 
-        private void Awake() {
+        private void Awake()
+        {
             //Singleton
-            if (Instance != null && Instance != this) {
+            if (Instance != null && Instance != this)
+            {
                 Destroy(gameObject);
-            } else {
+            }
+            else
+            {
                 Instance = this;
             }
         }
 
         #region WebRTC Events
-        public void OnDeletedConnection(SignalingEventData eventData) {
+        public void OnDeletedConnection(SignalingEventData eventData)
+        {
             Disconnect(eventData.connectionId);
         }
 
-        public void OnDisconnect(SignalingEventData eventData) {
+        public void OnDisconnect(SignalingEventData eventData)
+        {
             Disconnect(eventData.connectionId);
         }
 
-        private void Disconnect(string connectionId) {
+        private void Disconnect(string connectionId)
+        {
             if (!activeConnections.ContainsKey(connectionId))
                 return;
 
@@ -85,34 +93,42 @@ namespace FusedVR.VRStreaming {
         /// Event that is called when an Offer is made by a client
         /// Determines whether to accept offer and if so that to apply sources and submit answer
         /// </summary>
-        public void OnOffer(SignalingEventData data) {
+        public void OnOffer(SignalingEventData data)
+        {
 
             string inputGID = GetGameID(data.sdp);
-            if (gameID.Length != 0 && inputGID != gameID) {
+            if (gameID.Length != 0 && inputGID != gameID)
+            {
                 Debug.Log($"Offer Doesn't Match My GameID : {inputGID}");
                 return;
             }
 
-            if (activeConnections.Count >= maxConnections) { //if there is more than desired connection, let's skip this offer
+            if (activeConnections.Count >= maxConnections)
+            { //if there is more than desired connection, let's skip this offer
                 Debug.LogWarning($"Reached Maxed Connections : {activeConnections.Count}");
                 return;
             }
 
-            if (activeConnections.ContainsKey(data.connectionId)) { //if connection is already connected, skip offer
+            if (activeConnections.ContainsKey(data.connectionId))
+            { //if connection is already connected, skip offer
                 Debug.LogWarning($"Already answered this connectionId : {data.connectionId}");
                 return;
             }
 
             //only accept answer if there is a viable set of connections
-            if (playerPrefabs.Length > 0) {
+            if (playerPrefabs.Length > 0)
+            {
                 int playerID = activeConnections.Count % playerPrefabs.Length; //get remainder for mod
                 ClientStreams player = playerPrefabs[playerID];
 
-                if (priorPlayers.Count > 0) { // if player has previously connected
-                    player = priorPlayers.Dequeue() ;
+                if (priorPlayers.Count > 0)
+                { // if player has previously connected
+                    player = priorPlayers.Dequeue();
                     player.gameObject.SetActive(true);
-                } else if (player.gameObject.scene.rootCount == 0 // if player is a prefab or more connections than prefabs
-                    || activeConnections.Count >= playerPrefabs.Length) {
+                }
+                else if (player.gameObject.scene.rootCount == 0 // if player is a prefab or more connections than prefabs
+                  || activeConnections.Count >= playerPrefabs.Length)
+                {
                     player = Instantiate(playerPrefabs[playerID]);
                 }
 
@@ -126,8 +142,10 @@ namespace FusedVR.VRStreaming {
         /// <summary>
         /// Apply Data Channel
         /// </summary>
-        public void OnAddChannel(SignalingEventData data) {
-            if (activeConnections.ContainsKey(data.connectionId)) {
+        public void OnAddChannel(SignalingEventData data)
+        {
+            if (activeConnections.ContainsKey(data.connectionId))
+            {
                 activeConnections[data.connectionId].SetDataChannel(data);
             }
         }
@@ -137,22 +155,28 @@ namespace FusedVR.VRStreaming {
         /// <summary>
         /// Broadcast Data Message to all Clients
         /// </summary>
-        public void BroadcastDataMessage(string evt, string msg) {
-            foreach (string key in activeConnections.Keys) {
+        public void BroadcastDataMessage(string evt, string msg)
+        {
+            foreach (string key in activeConnections.Keys)
+            {
                 activeConnections[key].SendDataMessage(evt, msg); //send message to client
             }
         }
 
-        private string GetGameID(string sdp) {
+        private string GetGameID(string sdp)
+        {
             string[] parameters = sdp.Split('\n'); //split on new line
             string customParam = parameters[parameters.Length - 2].Split('=')[1]; //get line before last new line and split on =
 
             Dictionary<string, string> jsonMap = JsonConvert.DeserializeObject<Dictionary<string, string>>(customParam);
-            if (jsonMap != null) {
+            if (jsonMap != null)
+            {
                 string value = ""; //get dictionary value
                 jsonMap.TryGetValue("user", out value);
                 return value;
-            } else {
+            }
+            else
+            {
                 return ""; //TODO: check if this is a valid fail case as in do we want to connect to anything?
             }
 
